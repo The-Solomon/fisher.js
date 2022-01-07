@@ -1,0 +1,29 @@
+.board
+	margin: 75px auto
+	// max-heigth: 100%
+	width: 860px
+	height: 860px
+	display: grid
+	grid-template-columns: repeat(8, 1fr)
+	grid-template-rows: repeat(8, 1fr)
+	&__cell
+		position: relative
+		&--white
+			background: $boardCellWhite
+		&--black
+			background: $boardCellBlack
+		&--active
+			background: $boardCellActive
+.cell
+	&__hint
+		position: absolute
+		width: calc(860px / 35)
+		height: calc(860px / 35)
+		left: 50%
+		top: 50%
+		transform: translate(-50%, -50%)
+		border-radius: 50%
+		opacity: 0.1
+		display: block
+		background: #000
+		display: none
