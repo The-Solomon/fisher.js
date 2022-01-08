@@ -18,7 +18,8 @@ export default {
 		size: {
 			width: '860px',
 			height: '860px'
-		}
+		},
+		movesHistory: []
 	},
 	mutations: {
 		UPDATE_BOARD(state, board){
@@ -28,29 +29,80 @@ export default {
 			state.activeElement = elem
 		},
 		UPDATE_POSITION(state, {from, to}){
-
 			state.board[to.name].piece = from.info.piece
 			state.board[from.name].piece = null
 		}
 	},
 	actions: {
-		onDragStart({commit, dispatch, gettes}, {e, cellinfo, cellname}){
+		IS_VALID_MOVE: async({commit, dispatch, getters}, position) => {
+			let isValid;
+			let colorFrom = await dispatch("GET_PIECE_COLOR", position.from.info.piece),
+				colorTo = await dispatch("GET_PIECE_COLOR", position.to.info.piece);
+
+			if(colorFrom === colorTo) return false
+
+			switch(position.from.info.piece){
+				case "P":
+				case "p":
+					isValid = await dispatch("PAWN_MOVE", position);
+					break;
+				case "K":
+				case "k":
+					isValid = await dispatch("KING_MOVE", position);
+					break;
+				case "B":
+				case "b":
+					isValid = await dispatch("BISHOP_MOVE", position);
+					break;
+				case "R":
+				case "r":
+					isValid = await dispatch("ROOK_MOVE", position);
+					break;
+				case "N":
+				case "n":
+					isValid = await dispatch("KNIGHT_MOVE", position);
+					break;
+				case "Q":
+				case "q":
+					isValid = await dispatch("QUEEN_MOVE", position);
+
+			}
+
+			return isValid
+		},
+		GET_PIECE_COLOR: async({commit, dispatch}, piece) => {
+			let whitePieces = ['P', 'R', 'B', 'N', 'K', 'Q']
+			let blackPieces = ['p', 'r', 'b', 'n', 'k', 'q']
+
+			if(whitePieces.includes(piece)) return 'w'
+			if(blackPieces.includes(piece)) return 'b'
+
+			return null
+		},
+
+		IS_CHECK: async() =>{
+
+		},
+		IS_MATE: async()=>{
+
+		},
+
+		// DOM events
+		ON_DRAG_START: async({commit, dispatch, gettes}, {e, cellinfo, cellname}) => {
 			let $el = e.target
 			$el.style.position = 'fixed'
 			$el.style.left = e.pageX + 'px'
 			$el.style.top = e.pageY + 'px'
 			$el.style.transform = 'translate(-50%, -50%)'
 			$el.style.pointerEvents = 'none'
-			
 			const elem = {
 				selector: $el,
 				cellinfo: cellinfo,
 				cellname: cellname
 			}
-
 			commit("UPDATE_ACTIVE_ELEMENT", elem)
 		},
-		onDrag({commit, dispatch, getters}, {e}){
+		ON_DRAG: async({commit, dispatch, getters}, {e}) => {
 			if(!getters.GET_ACTIVE_ELEMENT) return false;
 			let $el = getters.GET_ACTIVE_ELEMENT.selector
 			$el.style.position = 'fixed'
@@ -59,7 +111,7 @@ export default {
 			$el.style.transform = 'translate(-50%, -50%)'
 			$el.style.pointerEvents = 'none'
 		},
-		onDrop({commit, dispatch, getters},{e, cellinfo, cellname}){
+		ON_DROP: async({commit, dispatch, getters},{e, cellinfo, cellname}) => {
 			if(!getters.GET_ACTIVE_ELEMENT) return false;
 			let $el = getters.GET_ACTIVE_ELEMENT.selector
 			$el.style.position = null
@@ -80,14 +132,93 @@ export default {
 			}
 			commit("UPDATE_ACTIVE_ELEMENT", null)
 			if(moveInfo.from.name === moveInfo.to.name) return false
+			const isValidMove = await dispatch("IS_VALID_MOVE", moveInfo)
+			if(!isValidMove) return false
 			commit("UPDATE_POSITION", moveInfo)
 			
 		},
 		
 
-		
-		CONVERT_FEN_TO_OBJECT({commit, getters}){
-			let fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'
+		PAWN_MOVE: async({commit, dispatch}, position) => {
+			let color = await dispatch("GET_PIECE_COLOR", position.from.info.piece)
+			const [fromX, fromY, toX, toY] = [position.from.info.x, position.from.info.y, position.to.info.x, position.to.info.y]
+
+			// Forbid pawn to move backward
+			if(color === 'w'){
+				if(fromY < toY) return false
+			} else if(color === 'b') {
+				if(fromY > toY) return false	
+			}
+
+			// If pawn is standing on 1 or 6 line allow to move it 2 cells forward
+			if(fromY === 1 || fromY === 6) {
+				if(Math.abs(fromY - toY) > 2) return false
+			} else {
+				if(Math.abs(fromY - toY) > 1) return false
+			}
+
+			// Forbid the pawn to move aside
+			if(Math.abs(fromX - toX) > 0) return false
+
+			return true
+		},
+		KING_MOVE: async({commit}, position) => {
+			const [fromX, fromY, toX, toY] = [position.from.info.x, position.from.info.y, position.to.info.x, position.to.info.y]
+			
+			// Forbid king to move more than 1 cell
+			if(Math.abs(fromX - toX) > 1) return false
+			if(Math.abs(fromY - toY) > 1) return false
+
+			return true
+		},
+		BISHOP_MOVE: async({commit, dispatch}, position) => {
+			const [fromX, fromY, toX, toY] = [position.from.info.x, position.from.info.y, position.to.info.x, position.to.info.y]
+			if(Math.abs(toX - fromX) !== Math.abs(toY - fromY)) return false
+			return true
+		},
+		ROOK_MOVE: async({commit}, position) => {
+			const [fromX, fromY, toX, toY] = [position.from.info.x, position.from.info.y, position.to.info.x, position.to.info.y]
+
+			// Forbid the rook to move diagonally 
+			if(fromY !== toY && fromX !== toX) return false
+
+			return true
+		},
+		KNIGHT_MOVE: async({commit, dispath}, position) => {
+			const [fromX, fromY, toX, toY] = [position.from.info.x, position.from.info.y, position.to.info.x, position.to.info.y]
+
+			// Forbid the knight to move more than 2 cells
+			if(Math.abs(fromX - toX) > 2) return false
+			if(Math.abs(fromY - toY) > 2) return false
+
+			// If knight moves 2 cells horizontally, forbid to move it more than 1 cell vertically. And vice versa
+			if(Math.abs(fromY - toY) === 2 && Math.abs(fromX - toX) !== 1) return false
+			if(Math.abs(fromX - toX) === 2 && Math.abs(fromY - toY) !== 1) return false
+			if(Math.abs(fromY - toY) === 1 && Math.abs(fromX - toX) !== 2) return false
+			if(Math.abs(fromX - toX) === 1 && Math.abs(fromY - toY) !== 2) return false
+
+			return true
+		},
+		QUEEN_MOVE: async({commit, dispatch}, position) => {
+			const [fromX, fromY, toX, toY] = [position.from.info.x, position.from.info.y, position.to.info.x, position.to.info.y]
+
+			if(fromY !== toY && fromX !== toX && Math.abs(toX - fromX) !== Math.abs(toY - fromY)) return false
+
+			return true
+		},
+		SHORT_CASTLING: async() => {
+
+		},
+		LONG_CASTLING: async() => {
+
+		},
+		PAWN_TRANSOFORMATION: async() => {
+
+		},
+
+		// Converters
+		CONVERT_FEN_TO_OBJECT: async({commit, getters}, fen) => {
+			// let fen = '8/8/8/8/8/8/7B/8 w KQkq - 0 1'
 			let cols = 'abcdefgh',
 				rows = '87654321';
 
@@ -120,9 +251,10 @@ export default {
 					i++
 				}
 			}
+
 			commit('UPDATE_BOARD', board)
 		},
-		CONVERT_OBJECT_TO_FEN({commit}, object){
+		CONVERT_OBJECT_TO_FEN: async({commit}, object) => {
 
 		}
 	},
