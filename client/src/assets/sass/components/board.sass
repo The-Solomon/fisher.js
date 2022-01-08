@@ -6,15 +6,29 @@
 	display: grid
 	grid-template-columns: repeat(8, 1fr)
 	grid-template-rows: repeat(8, 1fr)
-	&__cell
-		position: relative
-		&--white
-			background: $boardCellWhite
-		&--black
-			background: $boardCellBlack
-		&--active
-			background: $boardCellActive
+
+	&__piece
+		width: 100%
+		max-width: calc(860px / 8)
+		max-height: calc(860px / 8)
+		z-index: 1000
+		&-icon
+			width: 100%
+			display: block
+			pointer-events: none
 .cell
+	position: relative
+	line-height: 0
+	font-size: 0
+	margin: 0
+	padding: 0
+	box-sizing: border-box
+	&--white
+		background: $boardCellWhite
+	&--black
+		background: $boardCellBlack
+	&--active
+		background: $boardCellActive
 	&__hint
 		position: absolute
 		width: calc(860px / 35)
@@ -27,3 +41,17 @@
 		display: block
 		background: #000
 		display: none
+		pointer-events: none 
+	&__notation
+		pointer-events: none
+	&__mark
+		width: 100%
+		height: 100%
+		position: absolute
+		left: 0
+		top: 0
+		z-index: 92
+		background: rgba(coral, 50%)
+		display: none
+	&--has-border
+		border: solid 4px coral
