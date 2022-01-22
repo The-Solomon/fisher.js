@@ -1,12 +1,10 @@
 .board
 	margin: 75px auto
-	// max-heigth: 100%
 	width: 860px
 	height: 860px
 	display: grid
 	grid-template-columns: repeat(8, 1fr)
 	grid-template-rows: repeat(8, 1fr)
-
 	&__piece
 		width: 100%
 		max-width: calc(860px / 8)
@@ -23,6 +21,41 @@
 	margin: 0
 	padding: 0
 	box-sizing: border-box
+	background: $boardCellBlack
+
+	&:nth-child(n+1) 
+		&:nth-child(odd)
+			&:nth-child(-n + 8)
+				background: $boardCellWhite
+	&:nth-child(n+9) 
+		&:nth-child(even)
+			&:nth-child(-n + 16)
+				background: $boardCellWhite
+	&:nth-child(n+17) 
+		&:nth-child(odd)
+			&:nth-child(-n + 24)
+				background: $boardCellWhite
+	&:nth-child(n+25) 
+		&:nth-child(even)
+			&:nth-child(-n + 32)
+				background: $boardCellWhite
+	&:nth-child(n+33) 
+		&:nth-child(odd)
+			&:nth-child(-n + 40)
+				background: $boardCellWhite
+	&:nth-child(n+41) 
+		&:nth-child(even)
+			&:nth-child(-n + 48)
+				background: $boardCellWhite
+	&:nth-child(n+49) 
+		&:nth-child(odd)
+			&:nth-child(-n + 56)
+				background: $boardCellWhite
+	&:nth-child(n+57) 
+		&:nth-child(even)
+			&:nth-child(-n + 64)
+				background: $boardCellWhite
+
 	&--white
 		background: $boardCellWhite
 	&--black

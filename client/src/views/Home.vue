@@ -1,18 +1,25 @@
 <template>
   <div class="home">
-    <img alt="Vue logo" src="../assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+   <Board></Board>
+   <Clock></Clock>
   </div>
 </template>
 
 <script>
-// @ is an alias to /src
-import HelloWorld from '@/components/HelloWorld.vue'
-
+import Clock from '@/components/Clock.vue'
+import Board from '@/components/Board.vue'
 export default {
   name: 'Home',
   components: {
-    HelloWorld
+	  Board, Clock
+  },
+  mounted(){
+	  document.title = 'Fisher.js - Chess engine/Game'
   }
 }
 </script>
+<style scoped lang="css">
+html, body {
+	overflow: hidden
+}
+</style>

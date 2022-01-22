@@ -34,13 +34,20 @@ export default {
 		}
 	},
 	actions: {
+		IS_CORRECT_MOVE: async({commit, dispatch, getters}, position) => {
+			let colorFrom = await dispatch("GET_PIECE_COLOR", position.from.info.piece),
+				colorTo = await dispatch("GET_PIECE_COLOR", position.to.info.piece),
+				[player, turn] = [getters.GET_PLAYER_SIDE, getters.GET_MOVE_TURN];
+
+			if(colorFrom !== turn) return false;
+			if(colorFrom === colorTo) return false;
+		},
+
+		// Checking if the move is valid. Like if the rbishop moves only diagonaly, king moves only 
+		// at the distance of one cell etc.
 		IS_VALID_MOVE: async({commit, dispatch, getters}, position) => {
 			let isValid;
-			let colorFrom = await dispatch("GET_PIECE_COLOR", position.from.info.piece),
-				colorTo = await dispatch("GET_PIECE_COLOR", position.to.info.piece);
-
-			if(colorFrom === colorTo) return false
-
+			
 			switch(position.from.info.piece){
 				case "P":
 				case "p":
@@ -67,9 +74,10 @@ export default {
 					isValid = await dispatch("QUEEN_MOVE", position);
 
 			}
-
+			
 			return isValid
 		},
+		
 		GET_PIECE_COLOR: async({commit, dispatch}, piece) => {
 			let whitePieces = ['P', 'R', 'B', 'N', 'K', 'Q']
 			let blackPieces = ['p', 'r', 'b', 'n', 'k', 'q']
@@ -79,7 +87,6 @@ export default {
 
 			return null
 		},
-
 		IS_CHECK: async() =>{
 
 		},
@@ -88,8 +95,9 @@ export default {
 		},
 
 		// DOM events
-		ON_DRAG_START: async({commit, dispatch, gettes}, {e, cellinfo, cellname}) => {
+		DRAG_START: async({commit, dispatch, getters}, {e, cellinfo, cellname}) => {
 			let $el = e.target
+			if(e.buttons !== 1) return false
 			$el.style.position = 'fixed'
 			$el.style.left = e.pageX + 'px'
 			$el.style.top = e.pageY + 'px'
@@ -100,9 +108,12 @@ export default {
 				cellinfo: cellinfo,
 				cellname: cellname
 			}
-			commit("UPDATE_ACTIVE_ELEMENT", elem)
+			await commit("UPDATE_ACTIVE_ELEMENT", elem)
 		},
-		ON_DRAG: async({commit, dispatch, getters}, {e}) => {
+		DRAG_STOP: async({commit, dispatch}, {e}) => {
+
+		},
+		DRAG: async({commit, dispatch, getters}, {e}) => {
 			if(!getters.GET_ACTIVE_ELEMENT) return false;
 			let $el = getters.GET_ACTIVE_ELEMENT.selector
 			$el.style.position = 'fixed'
@@ -111,15 +122,9 @@ export default {
 			$el.style.transform = 'translate(-50%, -50%)'
 			$el.style.pointerEvents = 'none'
 		},
-		ON_DROP: async({commit, dispatch, getters},{e, cellinfo, cellname}) => {
-			if(!getters.GET_ACTIVE_ELEMENT) return false;
-			let $el = getters.GET_ACTIVE_ELEMENT.selector
-			$el.style.position = null
-			$el.style.left =  null
-			$el.style.top = null
-			$el.style.transform = null
-			$el.style.pointerEvents = null
+		DROP: async({commit, dispatch, getters},{e, cellinfo, cellname}) => {
 			
+			if(!getters.GET_ACTIVE_ELEMENT) return false;
 			let moveInfo = {
 				from: {
 					info: getters.GET_ACTIVE_ELEMENT.cellinfo,
@@ -129,16 +134,24 @@ export default {
 					info: cellinfo,
 					name: cellname
 				}
-			}
-			commit("UPDATE_ACTIVE_ELEMENT", null)
+			}		
 			if(moveInfo.from.name === moveInfo.to.name) return false
-			const isValidMove = await dispatch("IS_VALID_MOVE", moveInfo)
-			if(!isValidMove) return false
-			commit("UPDATE_POSITION", moveInfo)
-			
+			let isValidMove = await dispatch("IS_VALID_MOVE", moveInfo),
+				isCorrectMove = await dispatch("IS_CORRECT_MOVE", moveInfo);
+			console.log(isValidMove)
+			if(!isValidMove) return false;
+			// if(!isCorrectMove) return false;
+			await dispatch("CHANGE_MOVE_TURN")
+			await commit("UPDATE_ACTIVE_ELEMENT", null)
+			await commit("UPDATE_POSITION", moveInfo)
 		},
 		
-
+		/**
+		 * 
+		 * @param {Object} context
+		 * @param {Object} position - move`s information, from and to what point the piece was moved
+		 * @returns true if move is valid
+		 */
 		PAWN_MOVE: async({commit, dispatch}, position) => {
 			let color = await dispatch("GET_PIECE_COLOR", position.from.info.piece)
 			const [fromX, fromY, toX, toY] = [position.from.info.x, position.from.info.y, position.to.info.x, position.to.info.y]
@@ -150,7 +163,7 @@ export default {
 				if(fromY > toY) return false	
 			}
 
-			// If pawn is standing on 1 or 6 line allow to move it 2 cells forward
+			// If the pawn is standing on 1 or 6 line allow to move it 2 cells forward
 			if(fromY === 1 || fromY === 6) {
 				if(Math.abs(fromY - toY) > 2) return false
 			} else {
@@ -162,9 +175,9 @@ export default {
 
 			return true
 		},
-		KING_MOVE: async({commit}, position) => {
+		KING_MOVE: async({commit, dispatch}, position) => {
 			const [fromX, fromY, toX, toY] = [position.from.info.x, position.from.info.y, position.to.info.x, position.to.info.y]
-			
+
 			// Forbid king to move more than 1 cell
 			if(Math.abs(fromX - toX) > 1) return false
 			if(Math.abs(fromY - toY) > 1) return false
@@ -191,7 +204,7 @@ export default {
 			if(Math.abs(fromX - toX) > 2) return false
 			if(Math.abs(fromY - toY) > 2) return false
 
-			// If knight moves 2 cells horizontally, forbid to move it more than 1 cell vertically. And vice versa
+			// If the knight moves 2 cells horizontally, forbid to move it more than 1 cell vertically. And vice versa
 			if(Math.abs(fromY - toY) === 2 && Math.abs(fromX - toX) !== 1) return false
 			if(Math.abs(fromX - toX) === 2 && Math.abs(fromY - toY) !== 1) return false
 			if(Math.abs(fromY - toY) === 1 && Math.abs(fromX - toX) !== 2) return false
@@ -206,6 +219,7 @@ export default {
 
 			return true
 		},
+
 		SHORT_CASTLING: async() => {
 
 		},
@@ -252,10 +266,9 @@ export default {
 				}
 			}
 
-			commit('UPDATE_BOARD', board)
+			await commit('UPDATE_BOARD', board)
 		},
 		CONVERT_OBJECT_TO_FEN: async({commit}, object) => {
-
 		}
 	},
 	getters: {
